@@ -27,6 +27,9 @@ class Patient {
   final String dob;
   final List<String> allergies;
   final List<VitalReading> vitalsHistory;
+  final String? statusLabel;
+  final String? doctorName;
+  final String? roomNumber;
 
   Patient({
     required this.id,
@@ -39,6 +42,9 @@ class Patient {
     required this.dob,
     this.allergies = const [],
     this.vitalsHistory = const [],
+    this.statusLabel,
+    this.doctorName,
+    this.roomNumber,
   });
 
   String get initials {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
+import 'dart:typed_data';
 import '../../../core/theme/app_typography.dart';
 import '../app_avatar.dart';
 
@@ -7,6 +7,7 @@ class ProfileWidget extends StatelessWidget {
   final String initials;
   final String name;
   final String role;
+  final Uint8List? imageBytes;
   final VoidCallback? onTap;
 
   const ProfileWidget({
@@ -14,6 +15,7 @@ class ProfileWidget extends StatelessWidget {
     required this.initials,
     required this.name,
     required this.role,
+    this.imageBytes,
     this.onTap,
   });
 
@@ -37,6 +39,7 @@ class ProfileWidget extends StatelessWidget {
               children: [
                 AppAvatar(
                   initials: initials,
+                  imageBytes: imageBytes,
                   radius: 18.0,
                   backgroundColor: const Color(0xFF24C06F)
                       .withOpacity(0.15), // Brand green tint
@@ -54,7 +57,7 @@ class ProfileWidget extends StatelessWidget {
                         style: AppTypography.bodySemibold.copyWith(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.white,
+                          color: const Color(0xFF13294B),
                         ),
                       ),
                       Text(
@@ -62,14 +65,14 @@ class ProfileWidget extends StatelessWidget {
                         style: AppTypography.caption.copyWith(
                           fontSize: 10,
                           fontWeight: FontWeight.w500,
-                          color: AppColors.gray400,
+                          color: const Color(0xFF64748B),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(width: 4),
                   const Icon(Icons.keyboard_arrow_down,
-                      size: 16, color: AppColors.gray400),
+                      size: 16, color: Color(0xFF64748B)),
                 ],
               ],
             ),

@@ -32,7 +32,7 @@ class DashboardScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // 1. Hero / Schedule Banner Section
-                const HeroSection(bannerData: DashboardDummy.bannerData)
+                HeroSection(bannerData: DashboardDummy.bannerData)
                     .animate()
                     .fadeIn(duration: 400.ms)
                     .slideY(begin: -0.05, end: 0, curve: Curves.easeOutQuad),
@@ -58,7 +58,7 @@ class DashboardScreen extends StatelessWidget {
                               events: DashboardDummy.calendarEvents),
                         ),
                         SizedBox(width: dashboardGap),
-                        const Expanded(
+                        Expanded(
                           flex: 7,
                           child: AppointmentSection(
                               appointments: DashboardDummy.appointments),
@@ -74,7 +74,7 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       CalendarSection(events: DashboardDummy.calendarEvents),
                       SizedBox(height: dashboardGap),
-                      const AppointmentSection(
+                      AppointmentSection(
                           appointments: DashboardDummy.appointments),
                     ],
                   )

@@ -165,7 +165,7 @@ class _InteractiveMetricCardState extends State<_InteractiveMetricCard> with Sin
   Widget build(BuildContext context) {
     final cardColor = widget.isDarkNavy 
         ? const Color(0xFF315BFF) 
-        : (widget.isGreenGradient ? const Color(0xFF24C06F) : AppColors.primary);
+        : (widget.isGreenGradient ? Color(0xFF24C06F) : AppColors.primary);
 
     final titleColor = const Color(0xFF94A3B8);
     final valueColor = widget.isDarkNavy ? Colors.white : const Color(0xFF24C06F);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../widgets/sidebar/sidebar.dart';
 import '../widgets/topbar/topbar.dart';
+import '../../shared/services/settings_manager.dart';
 
 class AppShell extends StatefulWidget {
   final Widget child;
@@ -81,85 +82,90 @@ class _AppShellState extends State<AppShell> {
       });
     }
 
-    return Scaffold(
-      key: _scaffoldKey,
-      // Mobile drawer — no logo in drawer either; sidebar component handles it
-      drawer: isMobile
-          ? Drawer(
-              child: AppSidebar(
-                activeRoute: widget.activeRoute,
-                isCollapsed: false,
-              ),
-            )
-          : null,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(color: AppColors.background),
-          ),
-
-          // ── Main layout ─────────────────────────────────────────────────────
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── Unified topbar (includes logo panel synced to sidebar) ────
-                AppTopbar(
-                  pageTitle: pageTitle,
-                  isCollapsed: isCollapsed,
-                  // Logo area tap toggles sidebar (desktop/tablet only)
-                  onLogoAreaTap: isMobile ? null : toggleSidebar,
-                  onMenuPressed: () {
-                    if (isMobile) {
-                      _scaffoldKey.currentState?.openDrawer();
-                    }
-                  },
-                ),
-
-                // ── Body row: sidebar + content ──────────────────────────────
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (!isMobile)
-                        AppSidebar(
-                          activeRoute: widget.activeRoute,
-                          isCollapsed: isCollapsed,
-                          onToggle: toggleSidebar,
-                        ),
-                      Expanded(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 260),
-                          switchInCurve: Curves.easeOutCubic,
-                          switchOutCurve: Curves.easeInCubic,
-                          transitionBuilder: (child, animation) {
-                            final offsetAnimation = Tween<Offset>(
-                              begin: const Offset(0.012, 0),
-                              end: Offset.zero,
-                            ).animate(animation);
-
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: offsetAnimation,
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: KeyedSubtree(
-                            key: ValueKey(widget.activeRoute),
-                            child: widget.child,
-                          ),
-                        ),
-                      ),
-                    ],
+    return ListenableBuilder(
+      listenable: SettingsManager.instance,
+      builder: (context, _) {
+        return Scaffold(
+          key: _scaffoldKey,
+          // Mobile drawer — no logo in drawer either; sidebar component handles it
+          drawer: isMobile
+              ? Drawer(
+                  child: AppSidebar(
+                    activeRoute: widget.activeRoute,
+                    isCollapsed: false,
                   ),
+                )
+              : null,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: Container(color: Theme.of(context).scaffoldBackgroundColor),
+              ),
+
+              // ── Main layout ─────────────────────────────────────────────────────
+              SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // ── Unified topbar (includes logo panel synced to sidebar) ────
+                    AppTopbar(
+                      pageTitle: pageTitle,
+                      isCollapsed: isCollapsed,
+                      // Logo area tap toggles sidebar (desktop/tablet only)
+                      onLogoAreaTap: isMobile ? null : toggleSidebar,
+                      onMenuPressed: () {
+                        if (isMobile) {
+                          _scaffoldKey.currentState?.openDrawer();
+                        }
+                      },
+                    ),
+
+                    // ── Body row: sidebar + content ──────────────────────────────
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (!isMobile)
+                            AppSidebar(
+                              activeRoute: widget.activeRoute,
+                              isCollapsed: isCollapsed,
+                              onToggle: toggleSidebar,
+                            ),
+                          Expanded(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 260),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              transitionBuilder: (child, animation) {
+                                final offsetAnimation = Tween<Offset>(
+                                  begin: const Offset(0.012, 0),
+                                  end: Offset.zero,
+                                ).animate(animation);
+
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: SlideTransition(
+                                    position: offsetAnimation,
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: KeyedSubtree(
+                                key: ValueKey(widget.activeRoute),
+                                child: widget.child,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

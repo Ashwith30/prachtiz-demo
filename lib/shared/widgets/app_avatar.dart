@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 
 class AppAvatar extends StatelessWidget {
   final String? imageUrl;
+  final Uint8List? imageBytes;
   final String initials;
   final double radius;
   final Color? backgroundColor;
@@ -14,6 +16,7 @@ class AppAvatar extends StatelessWidget {
   const AppAvatar({
     super.key,
     this.imageUrl,
+    this.imageBytes,
     required this.initials,
     this.radius = 18.0,
     this.backgroundColor,
@@ -41,18 +44,29 @@ class AppAvatar extends StatelessWidget {
             : null,
       ),
       alignment: Alignment.center,
-      child: imageUrl != null && imageUrl!.isNotEmpty
+      child: imageBytes != null
           ? ClipRRect(
               borderRadius: BorderRadius.circular(radius),
-              child: Image.network(
-                imageUrl!,
+              child: Image.memory(
+                imageBytes!,
                 width: size,
                 height: size,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => _buildInitials(),
               ),
             )
-          : _buildInitials(),
+          : imageUrl != null && imageUrl!.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(radius),
+                  child: Image.network(
+                    imageUrl!,
+                    width: size,
+                    height: size,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => _buildInitials(),
+                  ),
+                )
+              : _buildInitials(),
     );
 
     return Semantics(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../core/theme/app_colors.dart';
 
 class NotificationButton extends StatelessWidget {
   final IconData icon;
@@ -34,25 +33,24 @@ class NotificationButton extends StatelessWidget {
               child: Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F223D),
+                decoration: const BoxDecoration(
+                  color: Colors.transparent,
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
                 ),
-                child: Icon(icon, size: 20, color: AppColors.gray300),
+                child: Icon(icon, size: 22, color: const Color(0xFF64748B)),
               ),
             ),
             if (badgeCount > 0)
               Positioned(
-                top: -2,
-                right: -2,
+                top: 0,
+                right: 0,
                 child: Container(
                   padding: const EdgeInsets.all(3),
                   decoration: BoxDecoration(
                     color: badgeColor,
                     shape: BoxShape.circle,
                     border:
-                        Border.all(color: const Color(0xFF13294B), width: 1.5),
+                        Border.all(color: Colors.white, width: 1.5),
                   ),
                   constraints: const BoxConstraints(
                     minWidth: 15,

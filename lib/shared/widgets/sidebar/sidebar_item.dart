@@ -57,6 +57,7 @@ class _AppSidebarItemState extends State<AppSidebarItem> {
         // Active: subtle green left-side accent bar rendered via a Stack
       ),
       child: Stack(
+        alignment: Alignment.centerLeft,
         children: [
           // ── Active left accent bar ─────────────────────────────────────────
           if (active)
@@ -98,35 +99,41 @@ class _AppSidebarItemState extends State<AppSidebarItem> {
             ),
 
           // ── Row: icon + animated label + badge ────────────────────────────
-          Padding(
-            padding: const EdgeInsets.only(left: 12, right: 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: collapsed
-                  ? MainAxisAlignment.center
-                  : MainAxisAlignment.start,
-              children: [
-                AnimatedScale(
-                  scale: active ? 1.08 : 1.0,
-                  duration: const Duration(milliseconds: 160),
-                  child: Icon(widget.icon, size: 17, color: iconColor),
-                ),
-                if (!collapsed) ...[
-                  const SizedBox(width: 11),
-                  Expanded(
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 160),
-                      style: GoogleFonts.inter(
-                        fontSize: 12.5,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                        color: labelColor,
-                      ),
-                      child: Text(
-                        widget.label,
-                        overflow: TextOverflow.ellipsis,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 12, right: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: collapsed
+                    ? MainAxisAlignment.center
+                    : MainAxisAlignment.start,
+                children: [
+                  AnimatedScale(
+                    scale: active ? 1.08 : 1.0,
+                    duration: const Duration(milliseconds: 160),
+                    child: Icon(widget.icon, size: 17, color: iconColor),
+                  ),
+                  if (!collapsed) ...[
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 160),
+                          style: GoogleFonts.inter(
+                            fontSize: 12.5,
+                            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                            color: labelColor,
+                            height: 1.0,
+                          ),
+                          child: Text(
+                            widget.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
                   if (widget.badge != null)
                     AnimatedOpacity(
                       opacity: collapsed ? 0 : 1,
@@ -148,8 +155,9 @@ class _AppSidebarItemState extends State<AppSidebarItem> {
                         ),
                       ),
                     ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ],

@@ -7,7 +7,7 @@ import '../../domain/models/footer_stat_model.dart';
 import '../../domain/models/calendar_event_model.dart';
 
 class DashboardDummy {
-  static const DashboardBannerModel bannerData = DashboardBannerModel(
+  static DashboardBannerModel get bannerData => DashboardBannerModel(
     greeting: "Today's Schedule",
     dateRangeText: "Tuesday, 16 June 2026",
     shiftText: "9:00 AM - 12:00 PM",
@@ -15,18 +15,18 @@ class DashboardDummy {
     loginTimeText: "Last Login 10:04 AM",
   );
 
-  static const SummaryCardModel totalAppointments = SummaryCardModel(
+  static SummaryCardModel get totalAppointments => SummaryCardModel(
     title: "TOTAL APPOINTMENTS TODAY",
     value: "15",
     changePercentage: 2.0,
     isPositive: true,
     icon: Icons.calendar_today_outlined,
     iconColor: AppColors.white,
-    iconBgColor: Color(0xFF13294B),
+    iconBgColor: AppColors.primaryDark,
     sparklineData: [10, 12, 11, 14, 13, 15],
   );
 
-  static const SummaryCardModel upcomingThisWeek = SummaryCardModel(
+  static SummaryCardModel get upcomingThisWeek => SummaryCardModel(
     title: "UPCOMING THIS WEEK",
     value: "48",
     changePercentage: 8.0,
@@ -100,7 +100,7 @@ class DashboardDummy {
     ),
   ];
 
-  static const List<DashboardAppointment> appointments = [
+  static final List<DashboardAppointment> appointments = [
     DashboardAppointment(
       id: "AM-1",
       initials: "AM",
@@ -206,7 +206,7 @@ class DashboardDummy {
     ),
   ];
 
-  static const List<FooterStatModel> footerStats = [
+  static final List<FooterStatModel> footerStats = [
     FooterStatModel(
       label: "Avg Consultation Time",
       value: "18 mins",

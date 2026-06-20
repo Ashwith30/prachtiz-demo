@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../shared/services/settings_manager.dart';
 
 class AppColors {
   // Brand Colors (Strictly mapped from design requirements)
-  static const Color primary = Color(0xFF315BFF);       // Electric Blue
+  static Color get primary => SettingsManager.instance.activeAccentColor;
   static const Color secondary = Color(0xFF24C06F);     // Emerald Green
   static const Color sidebarBg = Color(0xFF13294B);     // Dark Navy Blue
   static const Color background = Color(0xFFF5F7FB);    // Light Grey/Blue Background
@@ -50,11 +51,11 @@ class AppColors {
   static const Color divider = Color(0xFFE2E8F0);
 
   // Compatibility aliases
-  static const Color primaryBlue = primary;
-  static const Color primaryLight = Color(0xFF6082FF);
-  static const Color primaryDark = Color(0xFF1A3BB5);
-  static const Color primaryBg = Color(0xFFEFF2FF);
-  static const Color primaryBorder = Color(0xFFC7D2FE);
+  static Color get primaryBlue => primary;
+  static Color get primaryLight => primary.withOpacity(0.8);
+  static Color get primaryDark => primary;
+  static Color get primaryBg => primary.withOpacity(0.12);
+  static Color get primaryBorder => primary.withOpacity(0.3);
   
   static const Color accentGreen = secondary;
   static const Color accentGreenLight = successLight;
@@ -76,6 +77,6 @@ class AppColors {
   static Color glassBg = Colors.white.withOpacity(0.82);
   static Color glassBgHover = Colors.white.withOpacity(0.92);
   static Color glassBorder = Colors.white.withOpacity(0.68);
-  static Color glassShadow = const Color(0xFF315BFF).withOpacity(0.06);
+  static Color get glassShadow => primary.withOpacity(0.06);
   static const double glassBlur = 20.0;
 }
