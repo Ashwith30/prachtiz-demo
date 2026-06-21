@@ -1,10 +1,11 @@
 import "package:prachtiz_flutter/core/theme/app_colors.dart";
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../domain/models/billing.dart';
 import '../../../../theme/colors.dart';
-import '../../../../theme/styles.dart';
+import '../../../../shared/utils/print_helper.dart';
 
 class BillingScreen extends StatefulWidget {
   @override
@@ -12,6 +13,21 @@ class BillingScreen extends StatefulWidget {
 }
 
 class _BillingScreenState extends State<BillingScreen> {
+  // Active catalog category tab
+  String _activeTab = "Services";
+
+  // Diagnostic laboratory parameters marketplace catalog
+  final List<Map<String, dynamic>> _diagnosticCatalog = [
+    {"code": "LAB-01", "name": "Thyroid Profile (T3, T4, TSH)", "price": 450.0, "icon": Icons.biotech_outlined},
+    {"code": "LAB-02", "name": "Lipid Profile (Cholesterol)", "price": 350.0, "icon": Icons.science_outlined},
+    {"code": "LAB-03", "name": "HbA1c (Glycated Hemoglobin)", "price": 280.0, "icon": Icons.bloodtype_outlined},
+    {"code": "LAB-04", "name": "Liver Function Test (LFT)", "price": 550.0, "icon": Icons.analytics_outlined},
+    {"code": "LAB-05", "name": "Renal Function Test (RFT)", "price": 480.0, "icon": Icons.opacity_outlined},
+    {"code": "LAB-06", "name": "Vitamin D (25-Hydroxy)", "price": 850.0, "icon": Icons.wb_sunny_outlined},
+    {"code": "LAB-07", "name": "Urine Culture & Sensitivity", "price": 300.0, "icon": Icons.bubble_chart_outlined},
+    {"code": "LAB-08", "name": "Diabetes Screening Package", "price": 600.0, "icon": Icons.assignment_ind_outlined},
+  ];
+
   // Available clinical services catalog
   final List<Map<String, dynamic>> _catalog = [
     {"code": "SRV-01", "name": "General Physician Consultation", "price": 50.0, "icon": Icons.medical_services_outlined},
@@ -135,9 +151,7 @@ class _BillingScreenState extends State<BillingScreen> {
     });
   }
 
-  void _processCheckout(double total, double subtotal, double discountAmount, double taxAmount) {
-    if (_cart.isEmpty) return;
-
+  void _processCheckoutComplete(double total, double subtotal, double discountAmount, double taxAmount) {
     final String generatedId = "INV-${math.Random().nextInt(9000) + 1000}";
     final String currentDate = DateTime.now().toString().substring(0, 10);
     
@@ -166,6 +180,16 @@ class _BillingScreenState extends State<BillingScreen> {
     _showReceiptModal(newInvoice);
   }
 
+  void _processCheckout(double total, double subtotal, double discountAmount, double taxAmount) {
+    if (_cart.isEmpty) return;
+
+    if (_selectedPaymentMethod == "UPI" || _selectedPaymentMethod == "Card") {
+      _showSimulatedPaymentGatewayDialog(total, subtotal, discountAmount, taxAmount);
+    } else {
+      _processCheckoutComplete(total, subtotal, discountAmount, taxAmount);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Dynamic computations for the KPI Cards
@@ -182,8 +206,9 @@ class _BillingScreenState extends State<BillingScreen> {
     double cartTaxAmount = (cartSubtotal - cartDiscountAmount) * 0.05;
     double cartTotal = (cartSubtotal - cartDiscountAmount) + cartTaxAmount;
 
-    // Filter catalog based on search query
-    final filteredCatalog = _catalog.where((item) {
+    // Filter catalog based on search query and active tab
+    final activeCatalogList = _activeTab == "Services" ? _catalog : _diagnosticCatalog;
+    final filteredCatalog = activeCatalogList.where((item) {
       final name = item['name'].toString().toLowerCase();
       final code = item['code'].toString().toLowerCase();
       final query = _searchQuery.toLowerCase();
@@ -229,7 +254,7 @@ class _BillingScreenState extends State<BillingScreen> {
                     children: [
                       _buildLeftConsole(filteredCatalog),
                       const SizedBox(height: 16),
-                      _buildRightCartSummary(cartSubtotal, cartDiscountAmount, cartTaxAmount, cartTotal),
+                      _buildRightCartSummary(cartSubtotal, cartDiscountAmount, cartTaxAmount, cartTotal, isExpanded: false),
                     ],
                   )
                 : Row(
@@ -242,7 +267,7 @@ class _BillingScreenState extends State<BillingScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         flex: 4,
-                        child: _buildRightCartSummary(cartSubtotal, cartDiscountAmount, cartTaxAmount, cartTotal),
+                        child: _buildRightCartSummary(cartSubtotal, cartDiscountAmount, cartTaxAmount, cartTotal, isExpanded: false),
                       ),
                     ],
                   ),
@@ -289,6 +314,7 @@ class _BillingScreenState extends State<BillingScreen> {
   }
 
   Widget _buildLeftConsole(List<Map<String, dynamic>> filteredCatalog) {
+    final double screenWidth = MediaQuery.of(context).size.width;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -402,7 +428,15 @@ class _BillingScreenState extends State<BillingScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text("Quick Add Catalog Services", style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                  // Tab selectors for Services vs Diagnostic Marketplace
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildCatalogTab("Services", Icons.medical_services_outlined),
+                      const SizedBox(width: 8),
+                      _buildCatalogTab("Diagnostics", Icons.science_outlined),
+                    ],
+                  ),
                   // Search Box
                   SizedBox(
                     width: 200,
@@ -443,16 +477,20 @@ class _BillingScreenState extends State<BillingScreen> {
                 GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: screenWidth < 600 ? 1 : (screenWidth < 900 ? 2 : 3),
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
-                    childAspectRatio: 1.6,
+                    childAspectRatio: screenWidth < 600 ? 3.2 : (screenWidth < 1200 ? 2.4 : 2.2),
                   ),
                   itemCount: filteredCatalog.length,
                   itemBuilder: (context, index) {
                     final service = filteredCatalog[index];
-                    return _buildServiceTile(service);
+                    return _ServiceCatalogTile(
+                      item: service,
+                      onTap: () => _quickAddService(service),
+                      accentColor: _getItemColor(service['code']),
+                    );
                   },
                 ),
             ],
@@ -462,51 +500,27 @@ class _BillingScreenState extends State<BillingScreen> {
     );
   }
 
-  Widget _buildServiceTile(Map<String, dynamic> item) {
-    return InkWell(
-      onTap: () => _quickAddService(item),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF15193B),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white.withOpacity(0.04)),
-        ),
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  backgroundColor: AppColors.primary.withOpacity(0.12),
-                  radius: 12,
-                  child: Icon(item['icon'] as IconData, size: 12, color: AppColors.primary),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    item['name'],
-                    style: GoogleFonts.inter(color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w600),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(item['code'], style: GoogleFonts.inter(color: Colors.white30, fontSize: 8)),
-                Text("₹${item['price'].toStringAsFixed(2)}", style: GoogleFonts.inter(color: const Color(0xFF24C06F), fontSize: 10, fontWeight: FontWeight.bold)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
+  Color _getItemColor(String code) {
+    switch (code) {
+      case 'SRV-01': return const Color(0xFF3F8CFF); // General Physician: Blue
+      case 'SRV-02': return const Color(0xFFEF4444); // ECG: Coral/Red
+      case 'SRV-03': return const Color(0xFF8B5CF6); // CBC: Purple
+      case 'SRV-04': return const Color(0xFFF59E0B); // Vaccine: Orange
+      case 'SRV-05': return const Color(0xFF0EA5E9); // Chest X-Ray: Cyan
+      case 'SRV-06': return const Color(0xFF0D9488); // Urinalysis: Teal
+      case 'SRV-07': return const Color(0xFFEC4899); // Physiotherapy: Pink
+      case 'SRV-08': return const Color(0xFFF43F5E); // Echo: Rose
+      
+      case 'LAB-01': return const Color(0xFF8B5CF6); // Thyroid: Purple
+      case 'LAB-02': return const Color(0xFFF59E0B); // Lipid: Orange
+      case 'LAB-03': return const Color(0xFFF43F5E); // HbA1c: Rose
+      case 'LAB-04': return const Color(0xFF0D9488); // Liver: Teal
+      case 'LAB-05': return const Color(0xFF0EA5E9); // Renal: Cyan
+      case 'LAB-06': return const Color(0xFFEAB308); // Vitamin D: Yellow
+      case 'LAB-07': return const Color(0xFF10B981); // Urine: Emerald
+      case 'LAB-08': return const Color(0xFF3F8CFF); // Diabetes: Blue
+      default: return const Color(0xFF3F8CFF);
+    }
   }
 
   Widget _buildPaymentMethodSelector() {
@@ -556,7 +570,7 @@ class _BillingScreenState extends State<BillingScreen> {
     );
   }
 
-  Widget _buildRightCartSummary(double subtotal, double discount, double tax, double total) {
+  Widget _buildRightCartSummary(double subtotal, double discount, double tax, double total, {required bool isExpanded}) {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -584,105 +598,51 @@ class _BillingScreenState extends State<BillingScreen> {
           const Divider(color: Colors.white12, height: 20),
 
           // Cart Items List
-          if (_cart.isEmpty)
-            Container(
-              height: 120,
-              alignment: Alignment.center,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.shopping_cart_outlined, color: Colors.white24, size: 24),
-                  const SizedBox(height: 8),
-                  Text("Roster checkout cart is empty.", style: GoogleFonts.inter(color: Colors.white24, fontSize: 11)),
-                ],
-              ),
+          if (isExpanded)
+            Expanded(
+              child: _cart.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.shopping_cart_outlined, color: Colors.white24, size: 36),
+                          const SizedBox(height: 12),
+                          Text("Roster checkout cart is empty.", style: GoogleFonts.inter(color: Colors.white24, fontSize: 11)),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: _cart.length,
+                      itemBuilder: (context, index) {
+                        final item = _cart[index];
+                        return _buildCartItemRow(item, index);
+                      },
+                    ),
             )
           else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _cart.length,
-              itemBuilder: (context, index) {
-                final item = _cart[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10.0),
-                  child: Row(
-                    children: [
-                      // Item Name & Sub details
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item.description,
-                              style: GoogleFonts.inter(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              "Unit Price: ₹${item.unitPrice.toStringAsFixed(2)}",
-                              style: GoogleFonts.inter(color: Colors.white38, fontSize: 9),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Quantity Adjuster Controls
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E2548),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: () => _decrementQty(index),
-                              child: Container(
-                                padding: const EdgeInsets.all(4.0),
-                                child: const Icon(Icons.remove, size: 11, color: Colors.white70),
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                              child: Text(
-                                "${item.quantity}",
-                                style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: () => _incrementQty(index),
-                              child: Container(
-                                padding: const EdgeInsets.all(4.0),
-                                child: const Icon(Icons.add, size: 11, color: Colors.white70),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-
-                      // Item Total Price
-                      Text(
-                        "₹${item.total.toStringAsFixed(2)}",
-                        style: GoogleFonts.inter(color: Colors.white70, fontSize: 11.5, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(width: 4),
-
-                      // Delete complete
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 14, color: Color(0xFFEF4444)),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => setState(() => _cart.removeAt(index)),
-                      ),
-                    ],
+            _cart.isEmpty
+                ? Container(
+                    height: 120,
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.shopping_cart_outlined, color: Colors.white24, size: 24),
+                        const SizedBox(height: 8),
+                        Text("Roster checkout cart is empty.", style: GoogleFonts.inter(color: Colors.white24, fontSize: 11)),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _cart.length,
+                    itemBuilder: (context, index) {
+                      final item = _cart[index];
+                      return _buildCartItemRow(item, index);
+                    },
                   ),
-                );
-              },
-            ),
 
           const Divider(color: Colors.white12, height: 20),
 
@@ -766,103 +726,176 @@ class _BillingScreenState extends State<BillingScreen> {
           Text("Recent Transactions & Invoices", style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
           const Divider(color: Colors.white12, height: 20),
           
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 800),
-              child: DataTable(
-                columnSpacing: 24,
-                showCheckboxColumn: false,
-                headingRowHeight: 32,
-                dataRowHeight: 40,
-                horizontalMargin: 8,
-                columns: [
-                  DataColumn(label: Text("INVOICE ID", style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("PATIENT NAME", style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("DATE", style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("TOTAL AMOUNT", style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("PAYMENT METHOD", style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("STATUS", style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("ACTIONS", style: GoogleFonts.inter(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold))),
-                ],
-                rows: _recentInvoices.map((inv) {
-                  final Color statusColor;
-                  switch (inv.status) {
-                    case InvoiceStatus.paid:
-                      statusColor = const Color(0xFF24C06F);
-                      break;
-                    case InvoiceStatus.pending:
-                      statusColor = const Color(0xFFF59E0B);
-                      break;
-                    case InvoiceStatus.overdue:
-                      statusColor = const Color(0xFFEF4444);
-                      break;
-                    default:
-                      statusColor = AppColors.primary;
-                  }
-                  
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(inv.id, style: GoogleFonts.inter(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold))),
-                      DataCell(Text(inv.patientName, style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600))),
-                      DataCell(Text(inv.date, style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.5))),
-                      DataCell(Text("₹${inv.total.toStringAsFixed(2)}", style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold))),
-                      DataCell(Text(inv.paymentMethod, style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.5))),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: statusColor.withOpacity(0.35)),
-                          ),
-                          child: Text(
-                            inv.status.name.toUpperCase(),
-                            style: GoogleFonts.inter(color: statusColor, fontSize: 8, fontWeight: FontWeight.bold),
-                          ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isScreenSmall = constraints.maxWidth < 800;
+              final double minWidth = isScreenSmall ? 800.0 : constraints.maxWidth;
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: minWidth,
+                  child: Table(
+                    columnWidths: const {
+                      0: FlexColumnWidth(1.2), // Invoice ID
+                      1: FlexColumnWidth(2.0), // Patient Name
+                      2: FlexColumnWidth(1.5), // Date
+                      3: FlexColumnWidth(1.5), // Total Amount
+                      4: FlexColumnWidth(1.5), // Payment Method
+                      5: FlexColumnWidth(1.2), // Status
+                      6: FlexColumnWidth(1.2), // Actions
+                    },
+                    defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+                    children: [
+                      // Header Row
+                      TableRow(
+                        decoration: const BoxDecoration(
+                          border: Border(bottom: BorderSide(color: Colors.white12, width: 1)),
                         ),
+                        children: [
+                          _buildTableHeaderCell("INVOICE ID"),
+                          _buildTableHeaderCell("PATIENT NAME"),
+                          _buildTableHeaderCell("DATE"),
+                          _buildTableHeaderCell("TOTAL AMOUNT"),
+                          _buildTableHeaderCell("PAYMENT METHOD"),
+                          _buildTableHeaderCell("STATUS"),
+                          _buildTableHeaderCell("ACTIONS"),
+                        ],
                       ),
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
+                      // Data Rows
+                      ..._recentInvoices.map((inv) {
+                        final Color statusColor;
+                        switch (inv.status) {
+                          case InvoiceStatus.paid:
+                            statusColor = const Color(0xFF24C06F);
+                            break;
+                          case InvoiceStatus.pending:
+                            statusColor = const Color(0xFFF59E0B);
+                            break;
+                          case InvoiceStatus.overdue:
+                            statusColor = const Color(0xFFEF4444);
+                            break;
+                          default:
+                            statusColor = AppColors.primary;
+                        }
+
+                        return TableRow(
+                          decoration: const BoxDecoration(
+                            border: Border(bottom: BorderSide(color: Colors.white10, width: 1)),
+                          ),
                           children: [
-                            IconButton(
-                              icon: const Icon(Icons.visibility_outlined, size: 14, color: Colors.white70),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () => _showReceiptModal(inv),
-                            ),
-                            const SizedBox(width: 8),
-                            if (inv.status != InvoiceStatus.paid)
-                              IconButton(
-                                icon: const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF24C06F)),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: () {
-                                  setState(() {
-                                    int idx = _recentInvoices.indexWhere((i) => i.id == inv.id);
-                                    if (idx != -1) {
-                                      _recentInvoices[idx] = _recentInvoices[idx].copyWith(status: InvoiceStatus.paid);
-                                    }
-                                  });
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      backgroundColor: const Color(0xFF24C06F),
-                                      content: Text("Invoice ${inv.id} marked as Paid.", style: GoogleFonts.inter(color: Colors.white)),
-                                    ),
-                                  );
-                                },
+                            TableCell(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                child: Text(inv.id, style: GoogleFonts.inter(color: AppColors.primary, fontSize: 11, fontWeight: FontWeight.bold)),
                               ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                child: Text(inv.patientName, style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                child: Text(inv.date, style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.5)),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                child: Text("₹${inv.total.toStringAsFixed(2)}", style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                child: Text(inv.paymentMethod, style: GoogleFonts.inter(color: Colors.white54, fontSize: 10.5)),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: statusColor.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: statusColor.withOpacity(0.35)),
+                                    ),
+                                    child: Text(
+                                      inv.status.name.toUpperCase(),
+                                      style: GoogleFonts.inter(color: statusColor, fontSize: 8, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            TableCell(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.visibility_outlined, size: 14, color: Colors.white70),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () => _showReceiptModal(inv),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    if (inv.status != InvoiceStatus.paid)
+                                      IconButton(
+                                        icon: const Icon(Icons.check_circle_outline, size: 14, color: Color(0xFF24C06F)),
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        onPressed: () {
+                                          setState(() {
+                                            int idx = _recentInvoices.indexWhere((i) => i.id == inv.id);
+                                            if (idx != -1) {
+                                              _recentInvoices[idx] = _recentInvoices[idx].copyWith(status: InvoiceStatus.paid);
+                                            }
+                                          });
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              backgroundColor: const Color(0xFF24C06F),
+                                              content: Text("Invoice ${inv.id} marked as Paid.", style: GoogleFonts.inter(color: Colors.white)),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
-                        ),
-                      ),
+                        );
+                      }),
                     ],
-                  );
-                }).toList(),
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTableHeaderCell(String text) {
+    return TableCell(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        child: Text(
+          text,
+          style: GoogleFonts.inter(
+            color: Colors.white54,
+            fontSize: 9.5,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
       ),
     );
   }
@@ -974,19 +1007,39 @@ class _BillingScreenState extends State<BillingScreen> {
             ),
           ),
           actions: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.download, size: 14, color: Color(0xFF3F8CFF)),
+              label: Text("Download PDF", style: GoogleFonts.inter(color: const Color(0xFF3F8CFF), fontSize: 11.5, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF3F8CFF)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                PrintHelper.downloadInvoicePdf(inv);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: const Color(0xFF24C06F),
+                    content: Text("Generating & downloading PDF for INV-${inv.id}...", style: GoogleFonts.inter(color: Colors.white)),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(width: 8),
             ElevatedButton.icon(
               icon: const Icon(Icons.print, size: 14, color: Colors.white),
-              label: Text("Print Invoice Receipt", style: GoogleFonts.inter(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold)),
+              label: Text("Print Receipt", style: GoogleFonts.inter(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
               ),
               onPressed: () {
                 Navigator.pop(context);
+                PrintHelper.printInvoice(inv);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: const Color(0xFF24C06F),
-                    content: Text("Simulated sending INV-${inv.id} receipt to clinic printer.", style: GoogleFonts.inter(color: Colors.white)),
+                    content: Text("Opening print stream for INV-${inv.id} receipt...", style: GoogleFonts.inter(color: Colors.white)),
                   ),
                 );
               },
@@ -1068,6 +1121,505 @@ class _BillingScreenState extends State<BillingScreen> {
         borderSide: BorderSide(color: AppColors.primary),
         borderRadius: BorderRadius.circular(6),
       ),
+    );
+  }
+
+  Widget _buildCartItemRow(BillingItem item, int index) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.description,
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 11.5, fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Unit Price: ₹${item.unitPrice.toStringAsFixed(2)}",
+                  style: GoogleFonts.inter(color: Colors.white38, fontSize: 9),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E2548),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () => _decrementQty(index),
+                  child: Container(
+                    padding: const EdgeInsets.all(4.0),
+                    child: const Icon(Icons.remove, size: 11, color: Colors.white70),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                  child: Text(
+                    "${item.quantity}",
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => _incrementQty(index),
+                  child: Container(
+                    padding: const EdgeInsets.all(4.0),
+                    child: const Icon(Icons.add, size: 11, color: Colors.white70),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Text(
+            "₹${item.total.toStringAsFixed(2)}",
+            style: GoogleFonts.inter(color: Colors.white70, fontSize: 11.5, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.close, size: 14, color: Color(0xFFEF4444)),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            onPressed: () => setState(() => _cart.removeAt(index)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCatalogTab(String label, IconData icon) {
+    final bool isActive = _activeTab == label;
+    return GestureDetector(
+      onTap: () => setState(() => _activeTab = label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary.withOpacity(0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isActive ? AppColors.primary : Colors.white12,
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: isActive ? AppColors.primary : Colors.white54),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: isActive ? Colors.white : Colors.white54,
+                fontSize: 10.5,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _buildGatewayInputDeco(String label, IconData icon) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(color: Colors.white30, fontSize: 11),
+      filled: true,
+      fillColor: const Color(0xFF1E2548),
+      isDense: true,
+      prefixIcon: Icon(icon, color: Colors.white38, size: 14),
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: AppColors.primary),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Color(0xFFEF4444)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Color(0xFFEF4444)),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      errorStyle: GoogleFonts.inter(color: const Color(0xFFEF4444), fontSize: 9),
+    );
+  }
+
+  void _showSimulatedPaymentGatewayDialog(double total, double subtotal, double discountAmount, double taxAmount) {
+    final cardNumberController = TextEditingController();
+    final expiryController = TextEditingController();
+    final cvvController = TextEditingController();
+    final nameController = TextEditingController(text: _patientNameController.text);
+    
+    final formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        String gatewayStep = "Initial";
+        String gatewayMessage = "";
+        double chargeTotal = total;
+
+        return StatefulBuilder(
+          builder: (context, setGatewayState) {
+            Widget bodyContent;
+            
+            if (gatewayStep == "Processing") {
+              bodyContent = Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 3.5,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    "Simulating Gateway Transaction",
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    gatewayMessage,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              );
+            } else if (gatewayStep == "Success") {
+              bodyContent = Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 24),
+                  const CircleAvatar(
+                    backgroundColor: Color(0xFF1B4D3E),
+                    radius: 28,
+                    child: Icon(Icons.check_circle_outline, color: Color(0xFF24C06F), size: 36),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    "Payment Successful!",
+                    style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Simulated Stripe/Razorpay captures complete.",
+                    style: GoogleFonts.inter(color: Colors.white54, fontSize: 12),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              );
+            } else {
+              if (_selectedPaymentMethod == "UPI") {
+                bodyContent = Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 12),
+                    Text(
+                      "Scan QR Code to pay via UPI",
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Simulated Razorpay UPI Dynamic QR Intent",
+                      style: GoogleFonts.inter(color: Colors.white30, fontSize: 10),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    Container(
+                      width: 160,
+                      height: 160,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.02),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white.withOpacity(0.1)),
+                      ),
+                      child: CustomPaint(
+                        painter: _QRCodePainter(),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    Text(
+                      "Amount to Pay: ₹${chargeTotal.toStringAsFixed(2)}",
+                      style: GoogleFonts.inter(color: const Color(0xFF24C06F), fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Merchant: CallHealth Diagnostics Ltd.",
+                      style: GoogleFonts.inter(color: Colors.white54, fontSize: 11),
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    ElevatedButton(
+                      onPressed: () {
+                        setGatewayState(() {
+                          gatewayStep = "Processing";
+                          gatewayMessage = "Generating secure UPI payment request link...";
+                        });
+                        
+                        Timer(const Duration(milliseconds: 1000), () {
+                          if (!context.mounted) return;
+                          setGatewayState(() {
+                            gatewayMessage = "Waiting for patient to authorize UPI intent alert...";
+                          });
+                          
+                          Timer(const Duration(milliseconds: 1500), () {
+                            if (!context.mounted) return;
+                            setGatewayState(() {
+                              gatewayMessage = "NPCI network response: Success. finalising transfer...";
+                            });
+                            
+                            Timer(const Duration(milliseconds: 1000), () {
+                              if (!context.mounted) return;
+                              setGatewayState(() {
+                                gatewayStep = "Success";
+                              });
+                              
+                              Timer(const Duration(milliseconds: 1000), () {
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                                _processCheckoutComplete(chargeTotal, subtotal, discountAmount, taxAmount);
+                              });
+                            });
+                          });
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: Text("Simulate Patient Scan & Pay", style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                    ),
+                  ],
+                );
+              } else {
+                bodyContent = Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 8),
+                      Text(
+                        "Secure Card Payment Terminal",
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "Simulated Stripe Card Tokenization Integration",
+                        style: GoogleFonts.inter(color: Colors.white30, fontSize: 10),
+                      ),
+                      const Divider(color: Colors.white12, height: 24),
+                      
+                      TextFormField(
+                        controller: nameController,
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 12.5),
+                        decoration: _buildGatewayInputDeco("Cardholder Name", Icons.person_outline),
+                        validator: (value) => value == null || value.isEmpty ? "Enter cardholder name" : null,
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      TextFormField(
+                        controller: cardNumberController,
+                        style: GoogleFonts.inter(color: Colors.white, fontSize: 12.5),
+                        keyboardType: TextInputType.number,
+                        decoration: _buildGatewayInputDeco("Card Number (16 Digits)", Icons.credit_card_outlined),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) return "Enter card number";
+                          if (value.replaceAll(' ', '').length != 16) return "Must be exactly 16 digits";
+                          return null;
+                        },
+                        onChanged: (val) {
+                          String text = val.replaceAll(' ', '');
+                          if (text.length > 16) text = text.substring(0, 16);
+                          String formatted = "";
+                          for (int i = 0; i < text.length; i++) {
+                            if (i > 0 && i % 4 == 0) formatted += " ";
+                            formatted += text[i];
+                          }
+                          if (formatted != val) {
+                            cardNumberController.value = TextEditingValue(
+                              text: formatted,
+                              selection: TextSelection.collapsed(offset: formatted.length),
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: expiryController,
+                              style: GoogleFonts.inter(color: Colors.white, fontSize: 12.5),
+                              keyboardType: TextInputType.number,
+                              decoration: _buildGatewayInputDeco("Expiry (MM/YY)", Icons.calendar_today_outlined),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) return "Required";
+                                if (!value.contains('/')) return "Use MM/YY";
+                                return null;
+                              },
+                              onChanged: (val) {
+                                String text = val.replaceAll('/', '');
+                                if (text.length > 4) text = text.substring(0, 4);
+                                String formatted = text;
+                                if (text.length > 2) {
+                                  formatted = "${text.substring(0, 2)}/${text.substring(2)}";
+                                }
+                                if (formatted != val) {
+                                  expiryController.value = TextEditingValue(
+                                    text: formatted,
+                                    selection: TextSelection.collapsed(offset: formatted.length),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              controller: cvvController,
+                              style: GoogleFonts.inter(color: Colors.white, fontSize: 12.5),
+                              keyboardType: TextInputType.number,
+                              obscureText: true,
+                              decoration: _buildGatewayInputDeco("CVV (3 Digits)", Icons.lock_outline),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) return "Required";
+                                if (value.length != 3) return "Must be 3 digits";
+                                return null;
+                              },
+                              onChanged: (val) {
+                                if (val.length > 3) {
+                                  cvvController.value = TextEditingValue(
+                                    text: val.substring(0, 3),
+                                    selection: const TextSelection.collapsed(offset: 3),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      
+                      ElevatedButton(
+                        onPressed: () {
+                          if (formKey.currentState!.validate()) {
+                            setGatewayState(() {
+                              gatewayStep = "Processing";
+                              gatewayMessage = "Authorizing credit transaction token...";
+                            });
+                            
+                            Timer(const Duration(milliseconds: 1200), () {
+                              if (!context.mounted) return;
+                              setGatewayState(() {
+                                gatewayMessage = "Processing 3D-Secure bank challenge authorization...";
+                              });
+                              
+                              Timer(const Duration(milliseconds: 1500), () {
+                                if (!context.mounted) return;
+                                setGatewayState(() {
+                                  gatewayMessage = "Transaction authorized. Capturing funds...";
+                                });
+                                
+                                Timer(const Duration(milliseconds: 1000), () {
+                                  if (!context.mounted) return;
+                                  setGatewayState(() {
+                                    gatewayStep = "Success";
+                                  });
+                                  
+                                  Timer(const Duration(milliseconds: 1000), () {
+                                    if (!context.mounted) return;
+                                    Navigator.pop(context);
+                                    _processCheckoutComplete(chargeTotal, subtotal, discountAmount, taxAmount);
+                                  });
+                                });
+                              });
+                            });
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF24C06F),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text("Pay ₹${chargeTotal.toStringAsFixed(2)} Now", style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            }
+
+            return Dialog(
+              backgroundColor: const Color(0xFF0F132E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: BorderSide(color: Colors.white.withOpacity(0.08)),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                constraints: const BoxConstraints(maxWidth: 450),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.payment, color: Color(0xFF3F8CFF), size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                "CallHealth Secure Pay",
+                                style: GoogleFonts.inter(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          if (gatewayStep == "Initial")
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close, color: Colors.white54, size: 18),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      bodyContent,
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -1168,6 +1720,170 @@ class _InteractiveKPICardState extends State<_InteractiveKPICard> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QRCodePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
+
+    double cellSize = size.width / 21;
+    
+    void drawFinderPattern(double ox, double oy) {
+      canvas.drawRect(Rect.fromLTWH(ox, oy, cellSize * 7, cellSize * 7), paint);
+      canvas.drawRect(Rect.fromLTWH(ox + cellSize, oy + cellSize, cellSize * 5, cellSize * 5), Paint()..color = const Color(0xFF0F132E));
+      canvas.drawRect(Rect.fromLTWH(ox + cellSize * 2, oy + cellSize * 2, cellSize * 3, cellSize * 3), paint);
+    }
+
+    drawFinderPattern(0, 0);
+    drawFinderPattern(size.width - cellSize * 7, 0);
+    drawFinderPattern(0, size.height - cellSize * 7);
+
+    final random = math.Random(42);
+    for (int r = 0; r < 21; r++) {
+      for (int c = 0; c < 21; c++) {
+        if (r < 8 && c < 8) continue;
+        if (r < 8 && c > 12) continue;
+        if (r > 12 && c < 8) continue;
+        
+        if (random.nextBool()) {
+          canvas.drawRect(Rect.fromLTWH(c * cellSize, r * cellSize, cellSize, cellSize), paint);
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ServiceCatalogTile extends StatefulWidget {
+  final Map<String, dynamic> item;
+  final VoidCallback onTap;
+  final Color accentColor;
+
+  const _ServiceCatalogTile({
+    Key? key,
+    required this.item,
+    required this.onTap,
+    required this.accentColor,
+  }) : super(key: key);
+
+  @override
+  State<_ServiceCatalogTile> createState() => _ServiceCatalogTileState();
+}
+
+class _ServiceCatalogTileState extends State<_ServiceCatalogTile> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        transform: _isHovered 
+            ? (Matrix4.identity()..translate(0, -2, 0)) 
+            : Matrix4.identity(),
+        decoration: BoxDecoration(
+          color: _isHovered ? const Color(0xFF1C2252) : const Color(0xFF15193B),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: _isHovered 
+                ? widget.accentColor.withOpacity(0.35) 
+                : Colors.white.withOpacity(0.04),
+            width: 1.2,
+          ),
+          boxShadow: _isHovered 
+              ? [
+                  BoxShadow(
+                    color: widget.accentColor.withOpacity(0.08),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ] 
+              : [],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 26,
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: _isHovered 
+                              ? widget.accentColor.withOpacity(0.20) 
+                              : widget.accentColor.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          widget.item['icon'] as IconData,
+                          size: 13,
+                          color: widget.accentColor,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          widget.item['name'],
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        widget.item['code'],
+                        style: GoogleFonts.inter(
+                          color: Colors.white30,
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        "₹${widget.item['price'].toStringAsFixed(2)}",
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF24C06F),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

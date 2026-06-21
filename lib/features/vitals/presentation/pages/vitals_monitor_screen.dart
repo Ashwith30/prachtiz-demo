@@ -3,9 +3,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../theme/colors.dart';
-import '../../../../theme/styles.dart';
 
 // Patient vitals telemetry model
 class PatientVitals {
@@ -137,6 +135,18 @@ class _VitalsMonitorScreenState extends State<VitalsMonitorScreen> with SingleTi
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
+  // CheKUp Sync Integration State
+  bool _isSyncingCheKUp = false;
+  String _lastSyncedTime = "5 mins ago";
+  final List<Map<String, dynamic>> _chekupSyncLogs = [
+    {"patient": "Margaret Chen", "test": "Blood Pressure", "value": "128/82 mmHg", "status": "Verified & Signed", "time": "Just now"},
+    {"patient": "James O'Sullivan", "test": "Heart Rate (ECG)", "value": "95 bpm", "status": "Telemetry Warning", "time": "5 mins ago"},
+    {"patient": "Aisha Rahman", "test": "SpO2 Oxygen", "value": "99%", "status": "Verified & Signed", "time": "12 mins ago"},
+    {"patient": "Robert Nakamura", "test": "Body Temperature", "value": "100.4 °F", "status": "Verified & Signed", "time": "18 mins ago"},
+    {"patient": "Elena Vasquez", "test": "Blood Glucose", "value": "118 mg/dL", "status": "Verified & Signed", "time": "30 mins ago"},
+    {"patient": "Thomas Bergstrom", "test": "Blood Pressure", "value": "135/88 mmHg", "status": "Verified & Signed", "time": "45 mins ago"},
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -260,23 +270,87 @@ class _VitalsMonitorScreenState extends State<VitalsMonitorScreen> with SingleTi
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Page Title and Description
-            Text(
-              "Vitals Monitor",
-              style: GoogleFonts.inter(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.gray900,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "Real-time patient vital signs monitoring.",
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                color: AppColors.gray500,
-              ),
-            ),
+            // Page Title and Description with CheKUp Controls
+            Builder(builder: (context) {
+              final isWide = screenWidth > 800;
+              final headerContent = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "CheKUp Vitals Monitor",
+                    style: GoogleFonts.inter(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.gray900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Real-time vital signs telemetry & CallHealth CheKUp Diagnostics Integration.",
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: AppColors.gray500,
+                    ),
+                  ),
+                ],
+              );
+              final actionButtons = Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    tooltip: "CheKUp Device Settings & Logs",
+                    onPressed: _showCheKUpDeviceDialog,
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.04),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(color: Colors.white.withOpacity(0.08)),
+                      ),
+                    ),
+                    icon: const Icon(Icons.settings_input_hdmi_outlined, color: Color(0xFF3F8CFF), size: 18),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _syncCheKUpVitals,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF24C06F),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    ),
+                    icon: _isSyncingCheKUp
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.sync, size: 14, color: Colors.white),
+                    label: Text(
+                      _isSyncingCheKUp ? "Syncing..." : "Sync CheKUp (Last: $_lastSyncedTime)",
+                      style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              );
+
+              if (isWide) {
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(child: headerContent),
+                    actionButtons,
+                  ],
+                );
+              } else {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    headerContent,
+                    const SizedBox(height: 12),
+                    actionButtons,
+                  ],
+                );
+              }
+            }),
             const SizedBox(height: 20),
 
             // Search Bar & Filter ChoiceChips Row
@@ -653,6 +727,301 @@ class _VitalsMonitorScreenState extends State<VitalsMonitorScreen> with SingleTi
           ),
         ],
       ),
+    );
+  }
+
+  // CheKUp Telemetry Sync Handler
+  void _syncCheKUpVitals() {
+    if (_isSyncingCheKUp) return;
+    setState(() {
+      _isSyncingCheKUp = true;
+    });
+
+    Timer(const Duration(milliseconds: 1800), () {
+      if (mounted) {
+        setState(() {
+          _isSyncingCheKUp = false;
+          _lastSyncedTime = "Just now";
+          // Add a new entry to sync logs
+          _chekupSyncLogs.insert(0, {
+            "patient": "Margaret Chen",
+            "test": "Heart Rate (ECG)",
+            "value": "72 bpm",
+            "status": "Verified & Signed",
+            "time": "Just now"
+          });
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF24C06F),
+            behavior: SnackBarBehavior.floating,
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Text(
+                  "Synced 6 patient telemetry records from CallHealth CheKUp cloud successfully.",
+                  style: GoogleFonts.inter(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    });
+  }
+
+  // CheKUp Device Settings & Registry logs dialog popover
+  void _showCheKUpDeviceDialog() {
+    final Color kCardBorder = Colors.white.withOpacity(0.08);
+    bool isCalibrating = false;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            
+            return Dialog(
+              backgroundColor: const Color(0xFF0F132E),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: kCardBorder),
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Header Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.settings_input_hdmi_outlined, color: Color(0xFF3F8CFF), size: 24),
+                              const SizedBox(width: 12),
+                              Text(
+                                "CallHealth CheKUp® Device Manager",
+                                style: GoogleFonts.inter(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            onPressed: () => Navigator.pop(context),
+                            icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(color: Colors.white12, height: 1),
+                      const SizedBox(height: 20),
+
+                      // Device Stats Card
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.02),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withOpacity(0.06)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "DEVICE DIAGNOSTIC FEED",
+                              style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF3F8CFF), letterSpacing: 0.5),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildDiagField("Hardware Unit", "CheKUp Pro V4.2"),
+                                _buildDiagField("Connection Type", "Bluetooth 5.2 (Low Energy)"),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                _buildDiagField("Battery Level", "92% (Optimal Capacity)"),
+                                _buildDiagField("Calibration Profile", "Standard Clinical (June 2026)"),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Sync Logs Section
+                      Text(
+                        "RECENT DIAGNOSTIC SYNC LOGS",
+                        style: GoogleFonts.inter(color: const Color(0xFF3F8CFF), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 12),
+                      
+                      // Table of Sync Records
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 200),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withOpacity(0.06)),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const BouncingScrollPhysics(),
+                          itemCount: _chekupSyncLogs.length,
+                          separatorBuilder: (context, index) => const Divider(color: Colors.white10, height: 1),
+                          itemBuilder: (context, index) {
+                            final log = _chekupSyncLogs[index];
+                            final isWarning = log["status"] == "Telemetry Warning";
+                            final statusColor = isWarning ? const Color(0xFFF59E0B) : const Color(0xFF24C06F);
+                            
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          log["patient"],
+                                          style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          log["test"],
+                                          style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 11),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Text(
+                                      log["value"],
+                                      style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Container(
+                                      alignment: Alignment.center,
+                                      padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
+                                      decoration: BoxDecoration(
+                                        color: statusColor.withOpacity(0.08),
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: statusColor.withOpacity(0.2)),
+                                      ),
+                                      child: Text(
+                                        log["status"],
+                                        style: GoogleFonts.inter(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(
+                                        log["time"],
+                                        style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 11),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Device Diagnostic Action Button
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.white24),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: Text("Close", style: GoogleFonts.inter(color: Colors.white70)),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton(
+                            onPressed: () {
+                              setModalState(() {
+                                isCalibrating = true;
+                              });
+                              Timer(const Duration(milliseconds: 1500), () {
+                                if (context.mounted) {
+                                  setModalState(() {
+                                    isCalibrating = false;
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      backgroundColor: Color(0xFF24C06F),
+                                      behavior: SnackBarBehavior.floating,
+                                      content: Text("CheKUp calibration checks complete. Sensors verified."),
+                                    ),
+                                  );
+                                }
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF3F8CFF),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            child: isCalibrating
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : Text("Calibrate Sensors", style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDiagField(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 10),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.inter(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+        ),
+      ],
     );
   }
 }

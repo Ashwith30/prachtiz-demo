@@ -613,121 +613,337 @@ class _HoverStaffCardState extends State<_HoverStaffCard> {
         ? member.name.substring(3).trim()[0]
         : (member.name.startsWith("Nurse") ? member.name.substring(5).trim()[0] : member.name.trim()[0]);
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        curve: Curves.easeOutCubic,
-        transform: Matrix4.translationValues(0, _isHovered ? -4 : 0, 0),
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: _kCardBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _isHovered ? _kBrandBlue.withOpacity(0.4) : _kCardBorder, width: 1.2),
-          boxShadow: _isHovered
-              ? [
-                  BoxShadow(
-                    color: _kBrandBlue.withOpacity(0.08),
-                    offset: const Offset(0, 6),
-                    blurRadius: 16,
-                  )
-                ]
-              : [],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Top Row: Circle Avatar and Status Badge
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: _kBrandBlue.withOpacity(0.12),
-                  child: Text(
-                    initials,
-                    style: GoogleFonts.inter(
-                      fontWeight: FontWeight.bold,
-                      color: _kBrandBlue,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: statusTextColor.withOpacity(0.2)),
-                  ),
-                  child: Text(
-                    member.status,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: statusTextColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Middle: Name and Title
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  member.name,
-                  style: GoogleFonts.inter(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                    color: Colors.white,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  member.role,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: _kTextGray,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-            const Divider(color: Colors.white12, height: 1),
-            const SizedBox(height: 8),
-
-            // Bottom Rows: Dept, Shift, Patient count
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return GestureDetector(
+      onTap: () => _showStaffDetailsDialog(context, member),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          curve: Curves.easeOutCubic,
+          transform: Matrix4.translationValues(0, _isHovered ? -4 : 0, 0),
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: _kCardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: _isHovered ? _kBrandBlue.withOpacity(0.4) : _kCardBorder, width: 1.2),
+            boxShadow: _isHovered
+                ? [
+                    BoxShadow(
+                      color: _kBrandBlue.withOpacity(0.08),
+                      offset: const Offset(0, 6),
+                      blurRadius: 16,
+                    )
+                  ]
+                : [],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Top Row: Circle Avatar and Status Badge
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Department
-                  _buildDetailRow(deptIcon, member.department),
-                  // Shift
-                  _buildDetailRow(Icons.access_time_outlined, member.shift),
-                  // Patient load
-                  _buildDetailRow(
-                    Icons.people_outline,
-                    member.patientsCount > 0 ? "${member.patientsCount} patients" : "-",
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: _kBrandBlue.withOpacity(0.12),
+                    child: Text(
+                      initials,
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.bold,
+                        color: _kBrandBlue,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: statusBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: statusTextColor.withOpacity(0.2)),
+                    ),
+                    child: Text(
+                      member.status,
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: statusTextColor,
+                      ),
+                    ),
                   ),
                 ],
+              ),
+  
+              const SizedBox(height: 8),
+  
+              // Middle: Name and Title
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    member.name,
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    member.role,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: _kTextGray,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+  
+              const SizedBox(height: 8),
+              const Divider(color: Colors.white12, height: 1),
+              const SizedBox(height: 8),
+  
+              // Bottom Rows: Dept, Shift, Patient count
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    // Department
+                    _buildDetailRow(deptIcon, member.department),
+                    // Shift
+                    _buildDetailRow(Icons.access_time_outlined, member.shift),
+                    // Patient load
+                    _buildDetailRow(
+                      Icons.people_outline,
+                      member.patientsCount > 0 ? "${member.patientsCount} patients" : "-",
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showStaffDetailsDialog(BuildContext context, StaffMember member) {
+    String bio = "";
+    if (member.name.contains("Sarah Mitchell")) {
+      bio = "Dr. Sarah Mitchell is a senior Cardiologist with over 12 years of clinical experience. She specializes in advanced cardiovascular diagnostics, heart failure management, and preventive cardiology care.";
+    } else if (member.name.contains("Robert Kim")) {
+      bio = "Dr. Robert Kim is an accomplished Neurologist specializing in neurodegenerative diseases, stroke recovery, and clinical neurophysiology. He leads the stroke unit and oversees clinical trials.";
+    } else if (member.name.contains("Angela Park")) {
+      bio = "Dr. Angela Park is a dedicated Pulmonologist with expertise in sleep medicine, asthma therapies, and interstitial lung diseases. She actively contributes to clinical education.";
+    } else if (member.name.contains("Michael Torres")) {
+      bio = "Dr. Michael Torres is an Orthopedic Surgeon specializing in joint replacement, sports medicine, and reconstructive surgeries. He has performed over 1,500 successful operations.";
+    } else if (member.name.contains("Lisa Wong")) {
+      bio = "Nurse Lisa Wong is the Head Nurse of the Intensive Care Unit (ICU). She has over 15 years of critical care nursing experience and manages a team of 24 registered nurses.";
+    } else if (member.name.contains("James Hall")) {
+      bio = "Nurse James Hall is a Senior Registered Nurse in the Emergency Department (ER). He specializes in trauma triage, emergency wound care, and cardiac resuscitation protocols.";
+    } else if (member.name.contains("Helen Wu")) {
+      bio = "Dr. Helen Wu is a leading Endocrinologist focusing on diabetes management, thyroid disorders, and metabolic health. She is currently on sabbatical presenting research in Munich.";
+    } else if (member.name.contains("David Lam")) {
+      bio = "Technician David Lam is the Lead Laboratory Analyst. He has certifications in clinical pathology and biochemical hematology and oversees diagnostic instrument calibration.";
+    } else {
+      bio = "${member.name} is a dedicated ${member.role} in the ${member.department} department, committed to delivering top-tier patient care and clinical services.";
+    }
+
+    String education = "";
+    if (member.role.contains("Cardiologist") || member.role.contains("Neurologist") || member.role.contains("Pulmonologist") || member.role.contains("Endocrinologist") || member.role.contains("Surgeon")) {
+      education = "MD in Internal Medicine (Johns Hopkins University), Fellowship in ${member.department} (Mayo Clinic)";
+    } else if (member.role.contains("Nurse")) {
+      education = "Bachelor of Science in Nursing (BSN) - University of Washington, Certified Critical Care Registered Nurse (CCRN)";
+    } else {
+      education = "Bachelor of Science in Medical Laboratory Technology, Certified Clinical Pathologist (ASCP)";
+    }
+
+    final int hash = member.name.hashCode.abs() % 90000 + 10000;
+    final String license = member.role.contains("Nurse") ? "RN-$hash" : (member.role.contains("Tech") ? "LMT-$hash" : "LIC-$hash");
+    final String emailName = member.name.toLowerCase().replaceAll("dr. ", "").replaceAll("nurse ", "").replaceAll("tech. ", "").replaceAll(" ", ".");
+    final String contact = "$emailName@prachtiz.com (Ext. ${member.name.hashCode.abs() % 900 + 100})";
+
+    Color statusTextColor = _kTextGray;
+    if (member.status == "On Duty") {
+      statusTextColor = _kBrandGreen;
+    } else if (member.status == "On Leave") {
+      statusTextColor = _kWarningAmber;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: const Color(0xFF0F132E),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: _kCardBorder),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Top Header Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 28,
+                            backgroundColor: _kBrandBlue.withOpacity(0.12),
+                            child: Text(
+                              member.name.startsWith("Dr.")
+                                  ? member.name.substring(3).trim()[0]
+                                  : (member.name.startsWith("Nurse") ? member.name.substring(5).trim()[0] : member.name.trim()[0]),
+                              style: GoogleFonts.inter(
+                                fontWeight: FontWeight.bold,
+                                color: _kBrandBlue,
+                                fontSize: 22,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    member.name,
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: statusTextColor.withOpacity(0.08),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: statusTextColor.withOpacity(0.2)),
+                                    ),
+                                    child: Text(
+                                      member.status,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: statusTextColor,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                member.role,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: _kTextGray,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close, color: Colors.white54, size: 20),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  const Divider(color: Colors.white12, height: 1),
+                  const SizedBox(height: 20),
+
+                  // Professional Bio Section
+                  Text(
+                    "PROFESSIONAL BIOGRAPHY",
+                    style: GoogleFonts.inter(color: _kBrandBlue, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    bio,
+                    style: GoogleFonts.inter(color: Colors.white.withOpacity(0.9), fontSize: 13, height: 1.5),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Credentials Grid
+                  Text(
+                    "CLINICAL CREDENTIALS",
+                    style: GoogleFonts.inter(color: _kBrandBlue, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildModalDetailRow(Icons.favorite_outline, "Department", member.department),
+                  const SizedBox(height: 8),
+                  _buildModalDetailRow(Icons.school_outlined, "Education", education),
+                  const SizedBox(height: 8),
+                  _buildModalDetailRow(Icons.badge_outlined, "License Number", license),
+                  const SizedBox(height: 20),
+
+                  // Operations info
+                  Text(
+                    "TODAY'S OPERATIONS",
+                    style: GoogleFonts.inter(color: _kBrandBlue, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildModalDetailRow(Icons.access_time_outlined, "Shift Hours", member.shift == "-" ? "Off/On Leave" : "${member.shift} Roster"),
+                  const SizedBox(height: 8),
+                  _buildModalDetailRow(Icons.people_outline, "Assigned Patients", member.patientsCount > 0 ? "${member.patientsCount} patients active" : "None"),
+                  const SizedBox(height: 8),
+                  _buildModalDetailRow(Icons.mail_outline, "Contact Detail", contact),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildModalDetailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: _kTextGray),
+        const SizedBox(width: 12),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.bold, color: _kTextGray),
+            ),
+            const SizedBox(height: 2),
+            Container(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Text(
+                value,
+                style: GoogleFonts.inter(fontSize: 13, color: Colors.white, fontWeight: FontWeight.w500),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
