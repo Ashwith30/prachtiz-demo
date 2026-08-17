@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "if [ -d \"flutter\" ]; then cd flutter && git pull && cd ..; else git clone --depth 1 --branch stable https://github.com/flutter/flutter.git; fi && ./flutter/bin/flutter doctor",
+  "buildCommand": "cd frontend && ../flutter/bin/flutter build web --release",
+  "outputDirectory": "frontend/build/web"
+}

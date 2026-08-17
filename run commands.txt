@@ -1,0 +1,19 @@
+# Prachtiz Demo - Run Commands
+
+## 1. Backend Server (Node.js + Express + PostgreSQL)
+Navigate to the `backend` directory, install packages, and start the development server:
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+*Note: Make sure your Neon PostgreSQL connection string in the `backend/.env` file is set correctly.*
+
+## 2. Frontend Application (Flutter Web)
+Navigate to the `frontend` directory, fetch dependencies, and launch in Google Chrome:
+```bash
+cd frontend
+flutter pub get
+flutter run -d chrome
+```
